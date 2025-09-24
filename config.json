@@ -1,0 +1,7 @@
+{
+    "generateMapBook": {
+        "portalUrl": "https://gisweb.spwater.org/portal/",
+        "username": "portaladmin",
+        "password": "portaladmin01"
+    }
+}
