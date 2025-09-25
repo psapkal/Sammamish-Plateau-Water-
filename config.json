@@ -3,5 +3,17 @@
         "portalUrl": "https://gisweb.spwater.org/portal/",
         "username": "portaladmin",
         "password": "portaladmin01"
+    },
+
+    "updateProjectTables": {
+        "portalUrl": "https://www.arcgis.com/",
+        "username": "SammamishPlateauWater",
+        "password": "W@ter@nd$ewer@2",
+        "reporting_dbo_VIEW_EDEN_CIP_PROJECTS_FOR_INSPECTIONS": "J:\\EnterpriseGISConnections\\os@reporting.sde\\reporting.dbo.VIEW_EDEN_CIP_PROJECTS_FOR_INSPECTIONS",
+        "L0view_Eden_CIP_Projects_for_Inspections": "https://services3.arcgis.com/EvJrtJS93HgN2ScD/arcgis/rest/services/InspectorReports_Project_Tables/FeatureServer/0",
+        "reporting_dbo_VIEW_EDEN_DEA_PROJECTS_FOR_INSPECTIONS": "J:\\EnterpriseGISConnections\\os@reporting.sde\\reporting.dbo.VIEW_EDEN_DEA_PROJECTS_FOR_INSPECTIONS",
+        "L1view_Eden_DEA_Projects_for_Inspections": "https://services3.arcgis.com/EvJrtJS93HgN2ScD/arcgis/rest/services/InspectorReports_Project_Tables/FeatureServer/1",
+        "tableView": "view_Eden_CIP_Projects_for_Inspections"
+
     }
 }
