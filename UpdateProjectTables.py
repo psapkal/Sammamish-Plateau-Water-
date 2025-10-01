@@ -1,9 +1,18 @@
+# Standard library imports
 import arcpy
 import json
 import os
 
 def loadConfig():
-    """Load configuration from config.json file"""
+    """Load configuration from config.json file.
+
+    Returns:
+        dict: Configuration dictionary containing all application settings.
+
+    Raises:
+        FileNotFoundError: If config.json file is not found.
+        json.JSONDecodeError: If config.json contains invalid JSON.
+    """
     # Get the directory where this script is located
     scriptDir = os.path.dirname(os.path.abspath(__file__))
     configPath = os.path.join(scriptDir, 'config.json')
@@ -21,7 +30,25 @@ def loadConfig():
 
 
 def Model():
-    # Load configuration for updating project tables script
+    """
+    Main processing function for updating project tables in ArcGIS Online.
+
+    This function performs the complete workflow for synchronizing Eden database
+    project data with ArcGIS Online feature services. It handles both CIP and DEA
+    project types through a standardized process:
+
+    1. Portal authentication using configured credentials
+    2. Loading configuration settings for data sources and workspace
+    3. Creating filtered table views from Eden database views
+    4. Truncating existing data in ArcGIS Online feature services
+    5. Appending fresh data from database to feature services
+
+    Raises:
+        arcpy.ExecuteError: If any ArcGIS geoprocessing operation fails
+        Exception: If portal authentication or configuration loading fails
+    """
+    # Load configuration settings from external JSON file
+    # Load configuration settings from external JSON file
     config = loadConfig()
     updateConfig = config['updateProjectTables']
 
@@ -32,37 +59,104 @@ def Model():
         updateConfig['password']
     )
     
-    # To allow overwriting outputs change overwriteOutput option to True.
+    # Configure ArcGIS environment settings
+    # Set to False to prevent accidental overwrites during processing
     arcpy.env.overwriteOutput = False
 
-    reporting_dbo_VIEW_EDEN_CIP_PROJECTS_FOR_INSPECTIONS = updateConfig['reporting_dbo_VIEW_EDEN_CIP_PROJECTS_FOR_INSPECTIONS']
-    L0view_Eden_CIP_Projects_for_Inspections = updateConfig['L0view_Eden_CIP_Projects_for_Inspections']
-    reporting_dbo_VIEW_EDEN_DEA_PROJECTS_FOR_INSPECTIONS = updateConfig['reporting_dbo_VIEW_EDEN_DEA_PROJECTS_FOR_INSPECTIONS']
-    L1view_Eden_DEA_Projects_for_Inspections = updateConfig['L1view_Eden_DEA_Projects_for_Inspections']
+    # Load data source configurations
+    edenCipProjectsView = updateConfig['edenCipProjectsView']
+    cipProjectsServiceUrl = updateConfig['cipProjectsServiceUrl']
+    edenDeaProjectsView = updateConfig['edenDeaProjectsView']
+    deaProjectsServiceUrl = updateConfig['deaProjectsServiceUrl']
 
-    # Process: Make Table View (Make Table View) (management)
-    initialTableView = updateConfig['tableView']
-    with arcpy.EnvManager(scratchWorkspace=r"J:\EnterpriseGISProjects\SPW_DailyInspectionReports\WebServices\EdenProjects\Default.gdb", workspace=r"J:\EnterpriseGISProjects\SPW_DailyInspectionReports\WebServices\EdenProjects\Default.gdb"):
-        arcpy.management.MakeTableView(in_table=reporting_dbo_VIEW_EDEN_CIP_PROJECTS_FOR_INSPECTIONS, out_view=initialTableView, where_clause="", workspace="", field_info="project_ID project_ID VISIBLE NONE;Title Title VISIBLE NONE;Project_No Project_No VISIBLE NONE;Manager Manager VISIBLE NONE;Month11InspectionDue Month11InspectionDue VISIBLE NONE;Month23InspectionDue Month23InspectionDue VISIBLE NONE;AddExistingSewerERU AddExistingSewerERU VISIBLE NONE;AddExistingWaterERU AddExistingWaterERU VISIBLE NONE;ContractorCityStateZip ContractorCityStateZip VISIBLE NONE;ContractorCompanyName ContractorCompanyName VISIBLE NONE;ContractorContactEMail ContractorContactEMail VISIBLE NONE;ContractorFax ContractorFax VISIBLE NONE;ContractorName ContractorName VISIBLE NONE;ContractorPhone ContractorPhone VISIBLE NONE;ContractorStreetAddress ContractorStreetAddress VISIBLE NONE;DelinquentFinalLetter DelinquentFinalLetter VISIBLE NONE;DelinquentInitialLetter DelinquentInitialLetter VISIBLE NONE;DeveloperCityStateZip DeveloperCityStateZip VISIBLE NONE;DeveloperCompanyName DeveloperCompanyName VISIBLE NONE;DeveloperContactEMail DeveloperContactEMail VISIBLE NONE;DeveloperFax DeveloperFax VISIBLE NONE;DeveloperName DeveloperName VISIBLE NONE;DeveloperPhone DeveloperPhone VISIBLE NONE;DeveloperStreetAddress DeveloperStreetAddress VISIBLE NONE;DevelopmentServicesFee DevelopmentServicesFee VISIBLE NONE;DrawingsSignedDate DrawingsSignedDate VISIBLE NONE;EngineerAddress EngineerAddress VISIBLE NONE;EngineerCityStateZip EngineerCityStateZip VISIBLE NONE;EngineerCompanyName EngineerCompanyName VISIBLE NONE;EngineerContactEMail EngineerContactEMail VISIBLE NONE;EngineerFax EngineerFax VISIBLE NONE;EngineerName EngineerName VISIBLE NONE;EngineerPhone EngineerPhone VISIBLE NONE;FinalResolutionDate FinalResolutionDate VISIBLE NONE;FinalResolutionNo FinalResolutionNo VISIBLE NONE;FinalTotalSewerERUs FinalTotalSewerERUs VISIBLE NONE;FinalTotalWaterERUs FinalTotalWaterERUs VISIBLE NONE;FinalWaterDomesticERUs FinalWaterDomesticERUs VISIBLE NONE;FinalWaterIrrigationERUs FinalWaterIrrigationERUs VISIBLE NONE;GrinderPumpsRequired GrinderPumpsRequired VISIBLE NONE;InitialResolutionDate InitialResolutionDate VISIBLE NONE;InitialResolutionNo InitialResolutionNo VISIBLE NONE;InitialSewerERU InitialSewerERU VISIBLE NONE;InitialWaterDomesticERU InitialWaterDomesticERU VISIBLE NONE;InitialWaterIrrigationERU InitialWaterIrrigationERU VISIBLE NONE;MeterInstallRequired MeterInstallRequired VISIBLE NONE;NeedsProjectZeroing NeedsProjectZeroing VISIBLE NONE;NumberofGrinderPumps NumberofGrinderPumps VISIBLE NONE;NumberofMeterInstalls NumberofMeterInstalls VISIBLE NONE;OwnerCityStateZip OwnerCityStateZip VISIBLE NONE;OwnerEMail OwnerEMail VISIBLE NONE;OwnerName OwnerName VISIBLE NONE;OwnerPhoneNumber OwnerPhoneNumber VISIBLE NONE;OwnerStreetAddress OwnerStreetAddress VISIBLE NONE;PhasingResolutionDate PhasingResolutionDate VISIBLE NONE;PhasingResolutionNumber PhasingResolutionNumber VISIBLE NONE;PreconstructionMeetingDate PreconstructionMeetingDate VISIBLE NONE;SewerCertificateDate SewerCertificateDate VISIBLE NONE;SewerGFCCredits SewerGFCCredits VISIBLE NONE;SewerGFCsLocked SewerGFCsLocked VISIBLE NONE;SewerGFCsPaidDate SewerGFCsPaidDate VISIBLE NONE;SewerLFCPaid SewerLFCPaid VISIBLE NONE;SewerLFCPaidDate SewerLFCPaidDate VISIBLE NONE;SewerReimbursementApp SewerReimbursementApp VISIBLE NONE;SewerReimbursementExpiration SewerReimbursementExpiration VISIBLE NONE;SewerReimbursementResDate SewerReimbursementResDate VISIBLE NONE;SewerReimbursementResolution SewerReimbursementResolution VISIBLE NONE;Status Status VISIBLE NONE;TaxParcelNumbers TaxParcelNumbers VISIBLE NONE;WaterCertificateDate WaterCertificateDate VISIBLE NONE;WaterGFCCredits WaterGFCCredits VISIBLE NONE;WaterGFCsLocked WaterGFCsLocked VISIBLE NONE;WaterGFCsPaidDate WaterGFCsPaidDate VISIBLE NONE;WaterLFCPaid WaterLFCPaid VISIBLE NONE;WaterLFCPaidDate WaterLFCPaidDate VISIBLE NONE;WaterorSewerPartResDate WaterorSewerPartResDate VISIBLE NONE;WaterorSewerPartResolution WaterorSewerPartResolution VISIBLE NONE;WaterorSewerParticipation WaterorSewerParticipation VISIBLE NONE;WaterReimbursementApp WaterReimbursementApp VISIBLE NONE;WaterReimbursementExpiration WaterReimbursementExpiration VISIBLE NONE;WaterReimbursementResDate WaterReimbursementResDate VISIBLE NONE;WaterReimbursementResolution WaterReimbursementResolution VISIBLE NONE;YearConstructed YearConstructed VISIBLE NONE")
+    # Load workspace configuration for ArcGIS environment management
+    # These paths define where temporary data processing and operations occur
+    workspaceConfig = updateConfig['workspaceSettings']
+    scratchWorkspacePath = workspaceConfig['scratchWorkspace']
+    workspacePath = workspaceConfig['workspace']
 
-    # Process: Truncate Table (Truncate Table) (management)
-    Truncated_Table = arcpy.management.TruncateTable(in_table=L0view_Eden_CIP_Projects_for_Inspections)[0]
+    # Load table view and field configuration settings
+    # These control data presentation and field visibility in the output
+    cipProjectsTableView = updateConfig['tableView']
+    projectFieldInfo = updateConfig['fieldInfo']
 
-    # Process: Append (Append) (management)
-    view_Eden_CIP_Projects_for_Inspections_3_ = arcpy.management.Append(inputs=[initialTableView], target=Truncated_Table, schema_type="TEST_AND_SKIP", field_mapping="", subtype="", expression="")[0]
+    # ========== CIP (Capital Improvement Projects) Processing ==========
 
-    # Process: Make Table View (2) (Make Table View) (management)
-    view_Eden_DEA_Projects_for_Inspections_2_ = "view_Eden_DEA_Projects_for_Inspections"
-    with arcpy.EnvManager(scratchWorkspace=r"J:\EnterpriseGISProjects\SPW_DailyInspectionReports\WebServices\EdenProjects\Default.gdb", workspace=r"J:\EnterpriseGISProjects\SPW_DailyInspectionReports\WebServices\EdenProjects\Default.gdb"):
-        arcpy.management.MakeTableView(in_table=reporting_dbo_VIEW_EDEN_DEA_PROJECTS_FOR_INSPECTIONS, out_view=view_Eden_DEA_Projects_for_Inspections_2_, where_clause="", workspace="", field_info="project_ID project_ID VISIBLE NONE;Title Title VISIBLE NONE;Project_No Project_No VISIBLE NONE;Manager Manager VISIBLE NONE;Month11InspectionDue Month11InspectionDue VISIBLE NONE;Month23InspectionDue Month23InspectionDue VISIBLE NONE;AddExistingSewerERU AddExistingSewerERU VISIBLE NONE;AddExistingWaterERU AddExistingWaterERU VISIBLE NONE;ContractorCityStateZip ContractorCityStateZip VISIBLE NONE;ContractorCompanyName ContractorCompanyName VISIBLE NONE;ContractorContactEMail ContractorContactEMail VISIBLE NONE;ContractorFax ContractorFax VISIBLE NONE;ContractorName ContractorName VISIBLE NONE;ContractorPhone ContractorPhone VISIBLE NONE;ContractorStreetAddress ContractorStreetAddress VISIBLE NONE;DelinquentFinalLetter DelinquentFinalLetter VISIBLE NONE;DelinquentInitialLetter DelinquentInitialLetter VISIBLE NONE;DeveloperCityStateZip DeveloperCityStateZip VISIBLE NONE;DeveloperCompanyName DeveloperCompanyName VISIBLE NONE;DeveloperContactEMail DeveloperContactEMail VISIBLE NONE;DeveloperFax DeveloperFax VISIBLE NONE;DeveloperName DeveloperName VISIBLE NONE;DeveloperPhone DeveloperPhone VISIBLE NONE;DeveloperStreetAddress DeveloperStreetAddress VISIBLE NONE;DevelopmentServicesFee DevelopmentServicesFee VISIBLE NONE;DrawingsSignedDate DrawingsSignedDate VISIBLE NONE;EngineerAddress EngineerAddress VISIBLE NONE;EngineerCityStateZip EngineerCityStateZip VISIBLE NONE;EngineerCompanyName EngineerCompanyName VISIBLE NONE;EngineerContactEMail EngineerContactEMail VISIBLE NONE;EngineerFax EngineerFax VISIBLE NONE;EngineerName EngineerName VISIBLE NONE;EngineerPhone EngineerPhone VISIBLE NONE;FinalResolutionDate FinalResolutionDate VISIBLE NONE;FinalResolutionNo FinalResolutionNo VISIBLE NONE;FinalTotalSewerERUs FinalTotalSewerERUs VISIBLE NONE;FinalTotalWaterERUs FinalTotalWaterERUs VISIBLE NONE;FinalWaterDomesticERUs FinalWaterDomesticERUs VISIBLE NONE;FinalWaterIrrigationERUs FinalWaterIrrigationERUs VISIBLE NONE;GrinderPumpsRequired GrinderPumpsRequired VISIBLE NONE;InitialResolutionDate InitialResolutionDate VISIBLE NONE;InitialResolutionNo InitialResolutionNo VISIBLE NONE;InitialSewerERU InitialSewerERU VISIBLE NONE;InitialWaterDomesticERU InitialWaterDomesticERU VISIBLE NONE;InitialWaterIrrigationERU InitialWaterIrrigationERU VISIBLE NONE;MeterInstallRequired MeterInstallRequired VISIBLE NONE;NeedsProjectZeroing NeedsProjectZeroing VISIBLE NONE;NumberofGrinderPumps NumberofGrinderPumps VISIBLE NONE;NumberofMeterInstalls NumberofMeterInstalls VISIBLE NONE;OwnerCityStateZip OwnerCityStateZip VISIBLE NONE;OwnerEMail OwnerEMail VISIBLE NONE;OwnerName OwnerName VISIBLE NONE;OwnerPhoneNumber OwnerPhoneNumber VISIBLE NONE;OwnerStreetAddress OwnerStreetAddress VISIBLE NONE;PhasingResolutionDate PhasingResolutionDate VISIBLE NONE;PhasingResolutionNumber PhasingResolutionNumber VISIBLE NONE;PreconstructionMeetingDate PreconstructionMeetingDate VISIBLE NONE;SewerCertificateDate SewerCertificateDate VISIBLE NONE;SewerGFCCredits SewerGFCCredits VISIBLE NONE;SewerGFCsLocked SewerGFCsLocked VISIBLE NONE;SewerGFCsPaidDate SewerGFCsPaidDate VISIBLE NONE;SewerLFCPaid SewerLFCPaid VISIBLE NONE;SewerLFCPaidDate SewerLFCPaidDate VISIBLE NONE;SewerReimbursementApp SewerReimbursementApp VISIBLE NONE;SewerReimbursementExpiration SewerReimbursementExpiration VISIBLE NONE;SewerReimbursementResDate SewerReimbursementResDate VISIBLE NONE;SewerReimbursementResolution SewerReimbursementResolution VISIBLE NONE;Status Status VISIBLE NONE;TaxParcelNumbers TaxParcelNumbers VISIBLE NONE;WaterCertificateDate WaterCertificateDate VISIBLE NONE;WaterGFCCredits WaterGFCCredits VISIBLE NONE;WaterGFCsLocked WaterGFCsLocked VISIBLE NONE;WaterGFCsPaidDate WaterGFCsPaidDate VISIBLE NONE;WaterLFCPaid WaterLFCPaid VISIBLE NONE;WaterLFCPaidDate WaterLFCPaidDate VISIBLE NONE;WaterorSewerPartResDate WaterorSewerPartResDate VISIBLE NONE;WaterorSewerPartResolution WaterorSewerPartResolution VISIBLE NONE;WaterorSewerParticipation WaterorSewerParticipation VISIBLE NONE;WaterReimbursementApp WaterReimbursementApp VISIBLE NONE;WaterReimbursementExpiration WaterReimbursementExpiration VISIBLE NONE;WaterReimbursementResDate WaterReimbursementResDate VISIBLE NONE;WaterReimbursementResolution WaterReimbursementResolution VISIBLE NONE;YearConstructed YearConstructed VISIBLE NONE")
+    # Step 1: Create a filtered table view from Eden database CIP projects
+    # This creates a temporary view with configured field visibility for inspection reports
+    with arcpy.EnvManager(scratchWorkspace=scratchWorkspacePath, workspace=workspacePath):
+        arcpy.management.MakeTableView(
+            in_table=edenCipProjectsView,
+            out_view=cipProjectsTableView,
+            where_clause="",
+            workspace="",
+            field_info=projectFieldInfo
+        )
 
-    # Process: Truncate Table (2) (Truncate Table) (management)
-    Truncated_Table_2_ = arcpy.management.TruncateTable(in_table=L1view_Eden_DEA_Projects_for_Inspections)[0]
+    # Step 2: Clear existing CIP data from ArcGIS Online feature service
+    # This ensures we start with a clean slate before loading current data
+    truncatedCipTable = arcpy.management.TruncateTable(in_table=cipProjectsServiceUrl)[0]
 
-    # Process: Append (2) (Append) (management)
-    view_Eden_CIP_Projects_for_Inspections_2_ = arcpy.management.Append(inputs=[view_Eden_DEA_Projects_for_Inspections_2_], target=Truncated_Table_2_, schema_type="TEST_AND_SKIP", field_mapping="", subtype="", expression="")[0]
+    # Load fresh CIP projects data into the service table
+    appendedCipTable = arcpy.management.Append(
+        inputs=[cipProjectsTableView],
+        target=truncatedCipTable,
+        schema_type="TEST_AND_SKIP",
+        field_mapping="",
+        subtype="",
+        expression=""
+    )[0]
+
+    # ========== DEA (Development Engineering Applications) Processing ==========
+
+    # Step 1: Create a filtered table view from Eden database DEA projects
+    # This creates a temporary view with configured field visibility for inspection reports
+    deaProjectsTableView = updateConfig['deaTableView']  # Name for temporary DEA table view
+    with arcpy.EnvManager(scratchWorkspace=scratchWorkspacePath, workspace=workspacePath):
+        arcpy.management.MakeTableView(
+            in_table=edenDeaProjectsView,
+            out_view=deaProjectsTableView,
+            where_clause="",
+            workspace="",
+            field_info=projectFieldInfo
+        )
+
+    # Step 2: Clear existing DEA data from ArcGIS Online feature service
+    # This ensures we start with a clean slate before loading current data
+    truncatedDeaTable = arcpy.management.TruncateTable(in_table=deaProjectsServiceUrl)[0]
+
+    # Step 3: Append fresh DEA projects data to the ArcGIS Online service
+    # This loads all current DEA projects from the database into the feature service
+    appendedDeaTable = arcpy.management.Append(
+        inputs=[deaProjectsTableView],
+        target=truncatedDeaTable,
+        schema_type="TEST_AND_SKIP",
+        field_mapping="",
+        subtype="",
+        expression=""
+    )[0]
 
 if __name__ == '__main__':
-    # Global Environment settings
-    with arcpy.EnvManager(scratchWorkspace=r"J:\EnterpriseGISProjects\SPW_DailyInspectionReports\WebServices\EdenProjects\Default.gdb", workspace=r"J:\EnterpriseGISProjects\SPW_DailyInspectionReports\WebServices\EdenProjects\Default.gdb"):
+    """
+    Main execution block when script is run directly.
+
+    This block executes when the script is run as a standalone program.
+    It configures the global ArcGIS environment using settings from the
+    configuration file and then executes the main processing workflow.
+
+    The EnvManager context ensures that all ArcGIS operations throughout
+    the script use consistent workspace and scratch workspace settings.
+    """
+    # Load configuration settings for global environment setup
+    config = loadConfig()
+    updateConfig = config['updateProjectTables']
+    workspaceConfig = updateConfig['workspaceSettings']
+
+    # Configure global ArcGIS environment using settings from config file
+    # EnvManager ensures consistent workspace settings for all geoprocessing operations
+    with arcpy.EnvManager(
+        scratchWorkspace=workspaceConfig['scratchWorkspace'],
+        workspace=workspaceConfig['workspace']
+    ):
+        # Execute the complete project table update workflow
         Model()
