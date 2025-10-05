@@ -35,6 +35,19 @@
             "everyone": true,
             "groups": ""
         }
+    },
+
+    "myServices": {
+        "username": "siteadmin",
+        "password": "siteadmin",
+        "serverName": "geoserver1",
+        "serverPort": 6080,
+        "folderUrl": "/arcgis/admin/services/",
+        "headers": {
+            "Content-type": "application/x-www-form-urlencoded",
+            "Accept": "text/plain"
+        },
+        "tokenUrl": "/arcgis/admin/generateToken"
     }
 
 }
