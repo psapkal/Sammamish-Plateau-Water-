@@ -99,7 +99,7 @@ def createServiceDefinition(prj, map, sddraft: str, sd: str, sdFsName: str) -> N
     
     # Stage the service definition
     arcpy.StageService_server(sddraft, sd)
-    print(f"✅ Service definition created: {sd}")
+    print(f"Service definition created: {sd}")
 
 def configureSharing(featureService, shareWithOrg: bool, shareWithEveryone: bool, shareWithGroups: bool):
     """
