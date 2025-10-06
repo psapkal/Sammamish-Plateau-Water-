@@ -53,6 +53,22 @@
     "myError": {
         "brettEmail": "brett.angel@spwater.org;",
         "email": "mail.sammplat.wa.org"
+    },
+
+    "myDatabase": {
+        "defaultDatabase": "C:\\DatabaseConnections\\Production.sde",
+        "maintenanceOptions": {
+            "compressDatabase": true,
+            "rebuildIndexes": true,
+            "analyzeDatasets": true,
+            "includeSystemTables": true,
+            "analyzeTypes": ["ANALYZE_BASE", "ANALYZE_DELTA", "ANALYZE_ARCHIVE"]
+        },
+        "logging": {
+            "verbose": true,
+            "logMaintenanceSteps": true
+        }
     }
+
 
 }
