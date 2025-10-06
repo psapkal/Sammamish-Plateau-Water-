@@ -2,7 +2,15 @@
     "generateMapBook": {
         "portalUrl": "https://gisweb.spwater.org/portal/",
         "username": "portaladmin",
-        "password": "portaladmin01"
+        "password": "portaladmin01",
+        "mapBookPath": "J:\\EnterpriseGISWorkflows\\GIS_Mapbooks\\GIS_Mapbooks\\GIS_MapbooksUN.aprx",
+        "sewerIndexPdfPath": "J:\\EnterpriseGISOperations\\MapbooksUN\\SewerIndex.pdf",
+        "waterIndexPdfPath": "J:\\EnterpriseGISOperations\\MapbooksUN\\WaterIndex.pdf",
+        "sewerMapbookPath": "J:\\EnterpriseGISOperations\\MapbooksUN\\SewerMapbook.pdf",
+        "sewerPagesMapbookPath": "J:\\EnterpriseGISOperations\\MapbooksUN\\SewerPages\\SewerMapbook.pdf",
+        "waterMapbookPath": "J:\\EnterpriseGISOperations\\MapbooksUN\\WaterMapbook.pdf",
+        "waterPagesMapbookPath": "J:\\EnterpriseGISOperations\\MapbooksUN\\WaterPages\\WaterMapbook.pdf" 
+
     },
 
     "updateProjectTables": {
