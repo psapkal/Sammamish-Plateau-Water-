@@ -48,6 +48,11 @@
             "Accept": "text/plain"
         },
         "tokenUrl": "/arcgis/admin/generateToken"
+    },
+    
+    "myError": {
+        "brettEmail": "brett.angel@spwater.org;",
+        "email": "mail.sammplat.wa.org"
     }
 
 }
