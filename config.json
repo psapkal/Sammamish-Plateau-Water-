@@ -86,6 +86,10 @@
         "username": "SammamishPlateauWater",
         "password": "W@ter@nd$ewer4u"
 
+    },
+
+    "myFeatureClass": {
+        "basename": "production.DBO.ssPump"
     }
 
 
