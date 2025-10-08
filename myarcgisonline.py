@@ -2,14 +2,14 @@
 #   and calling publishing (with overwrite) to update the feature service
 #
 
-import ConfigParser
+import configparser
 import ast
 import os
 import sys
 import time
 
-import urllib2
-import urllib
+import urllib.request
+import urllib.parse
 import json
 import mimetypes
 import gzip
@@ -21,16 +21,56 @@ from xml.etree import ElementTree as ET
 import arcpy
 
 
-class AGOLHandler(object):
+def loadConfig():
+    """
+    Load configuration from config.json file.
+    
+    Returns:
+        dict: Configuration dictionary containing myArcGISOnline settings
+        
+    Raises:
+        RuntimeError: If config file cannot be loaded
+    """
+    try:
+        configPath = os.path.join(os.path.dirname(__file__), 'config.json')
+        with open(configPath, 'r') as configFile:
+            config = json.load(configFile)
+        return config['myArcGISOnline']
+    except Exception as e:
+        raise RuntimeError(f"Failed to load config.json: {e}")
 
-    def __init__(self, username, password, serviceName, folderName):
+
+class AGOLHandler(object):
+    """
+    Handles interactions with ArcGIS Online (AGOL) for managing hosted feature services.
+    
+    This class provides methods to authenticate, upload Service Definition files,
+    publish feature services, and manage service properties on ArcGIS Online.
+
+    """
+
+    def __init__(self, username, password, serviceName, folderName, config=None):
+        """
+        Initialize the AGOL handler with user credentials and service information.
+        
+        Args:
+            username (str): ArcGIS Online username
+            password (str): ArcGIS Online password
+            serviceName (str): Name of the service to manage
+            folderName (str): Name of the folder containing the service (use "None" for root)
+            config (dict, optional): Configuration dictionary. If None, will load from config.json
+        """
+        if config is None:
+            config = loadConfig()
+            
         self.headers = {
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
             'User-Agent': ('updatehostedfeatureservice')
         }
         self.username = username
         self.password = password
-        self.base_url = "https://www.arcgis.com/sharing/rest"
+        self.base_url = config.get('baseUrl', "https://www.arcgis.com/sharing/rest")
+        self.config = config
         self.serviceName = serviceName
         self.token = self.getToken(username, password)
         self.itemID = self.findItem("Feature Service")
@@ -39,8 +79,21 @@ class AGOLHandler(object):
         self.folderID = self.findFolder()
 
     def getToken(self, username, password, exp=60):
-
-        referer = "http://www.arcgis.com/"
+        """
+        Generate an authentication token for ArcGIS Online API access.
+        
+        Args:
+            username (str): ArcGIS Online username
+            password (str): ArcGIS Online password
+            exp (int): Token expiration time in minutes (default: 60)
+            
+        Returns:
+            str: Authentication token for API requests
+            
+        Raises:
+            SystemExit: If authentication fails or token cannot be generated
+        """
+        referer = self.config.get('refererUrl', "http://www.arcgis.com/")
         query_dict = {'username': username,
                       'password': password,
                       'expiration': str(exp),
@@ -59,7 +112,17 @@ class AGOLHandler(object):
             return token_response['token']
 
     def findItem(self, findType):
-        """ Find the itemID of whats being updated
+        """
+        Find the item ID of a specific service type owned by the current user.
+        
+        Args:
+            findType (str): Type of item to search for (e.g., "Feature Service", "Service Definition")
+            
+        Returns:
+            str: Item ID of the found service
+            
+        Raises:
+            SystemExit: If no matching service is found
         """
 
         searchURL = self.base_url + "/search"
@@ -78,11 +141,22 @@ class AGOLHandler(object):
             resultList = jsonResponse['results']
             for it in resultList:
                 if it["title"] == self.serviceName:
-                    print("found {} : {}").format(findType, it["id"])
+                    print("found {} : {}".format(findType, it["id"]))
                     return it["id"]
 
     def findFolder(self, folderName=None):
-        """ Find the ID of the folder containing the service
+        """
+        Find the ID of the folder containing the service.
+        
+        Args:
+            folderName (str, optional): Name of the folder to search for.
+                                      Uses self.folderName if not provided.
+                                      
+        Returns:
+            str: Folder ID, or empty string if folder is "None" (root folder)
+            
+        Raises:
+            SystemExit: If the specified folder cannot be found
         """
 
         if self.folderName == "None":
@@ -106,8 +180,16 @@ class AGOLHandler(object):
 
     def upload(self, fileName):
         """
-         Overwrite the SD on AGOL with the new SD.
-         This method uses 3rd party module: requests
+        Upload and overwrite the Service Definition (.SD) file on ArcGIS Online.
+        
+        Args:
+            fileName (str): Full path to the .SD file to upload
+            
+        Returns:
+            bool: True if upload is successful, False otherwise
+            
+        Raises:
+            SystemExit: If upload fails or encounters errors
         """
 
         updateURL = '{}/content/users/{}/{}/items/{}/update'.format(self.base_url, self.username,
@@ -145,11 +227,33 @@ class AGOLHandler(object):
             sys.exit()
 
     def _add_part(self, file_to_upload, item_id, upload_type=None):
-        """ Add the item to the portal in chunks.
+        """
+        Upload a large file to ArcGIS Online using multipart upload.
+        
+        This method breaks large files into 10MB chunks and uploads them sequentially.
+        This approach is necessary for large Service Definition files that exceed
+        standard upload size limits.
+        
+        Args:
+            file_to_upload (str): Full path to the file to upload
+            item_id (str): ID of the item being updated
+            upload_type (str, optional): Type of upload (e.g., "Service Definition")
+            
+        Returns:
+            dict: Response from the final upload part containing upload status
         """
 
         def read_in_chunks(file_object, chunk_size=10000000):
-            """Generate file chunks of 10MB"""
+            """
+            Generator that reads a file in chunks of specified size.
+            
+            Args:
+                file_object: Open file object to read from
+                chunk_size (int): Size of each chunk in bytes (default: 10MB)
+                
+            Yields:
+                bytes: File data chunks
+            """
             while True:
                 data = file_object.read(chunk_size)
                 if not data:
@@ -177,7 +281,13 @@ class AGOLHandler(object):
         return resp
 
     def item_status(self, item_id, jobId=None):
-        """ Gets the status of an item.
+        """
+        Check the status of an uploaded item or publishing job.
+        
+        Args:
+            item_id (str): ID of the item to check status for
+            jobId (str, optional): Specific job ID to check (for publishing operations)
+            
         Returns:
             The item's status. (partial | processing | failed | completed)
         """
@@ -192,7 +302,17 @@ class AGOLHandler(object):
         return self.url_request(url, parameters)
 
     def commit(self, item_id):
-        """ Commits an item that was uploaded as multipart
+        """
+        Commit a multipart upload to finalize the file upload process.
+        
+        After all parts of a multipart upload are completed, this method
+        tells ArcGIS Online to combine all parts into the final file.
+        
+        Args:
+            item_id (str): ID of the item with completed multipart upload
+            
+        Returns:
+            dict: Response from the commit operation
         """
 
         url = '{}/content/users/{}/items/{}/commit'.format(self.base_url, self.username, item_id)
@@ -202,7 +322,19 @@ class AGOLHandler(object):
         return self.url_request(url, parameters)
 
     def publish(self):
-        """ Publish the existing SD on AGOL (it will be turned into a Feature Service)
+        """
+        Publish the uploaded Service Definition as a Feature Service.
+        
+        This method converts the uploaded .SD file into a hosted Feature Service
+        on ArcGIS Online, with overwrite enabled to replace any existing service.
+        The publishing process is asynchronous and this method monitors the
+        progress until completion.
+        
+        Returns:
+            str: Service item ID of the published feature service
+            
+        Raises:
+            SystemExit: If publishing fails or encounters errors
         """
 
         publishURL = '{}/content/users/{}/publish'.format(self.base_url, self.username)
@@ -241,7 +373,17 @@ class AGOLHandler(object):
 
 
     def enableSharing(self, newItemID, everyone, orgs, groups):
-        """ Share an item with everyone, the organization and/or groups
+        """
+        Configure sharing permissions for a published feature service.
+        
+        Args:
+            newItemID (str): Item ID of the service to share
+            everyone (str): Share with everyone ('true' or 'false')
+            orgs (str): Share with organization ('true' or 'false')
+            groups (str): Comma-separated list of group IDs to share with
+            
+        Returns:
+            None: Prints confirmation of successful sharing
         """
 
         shareURL = '{}/content/users/{}/{}/items/{}/share'.format(self.base_url, self.username,
@@ -263,35 +405,41 @@ class AGOLHandler(object):
     def url_request(self, in_url, request_parameters, request_type='GET',
                     additional_headers=None, files=None, repeat=0):
         """
-        Make a request to the portal, provided a portal URL
-        and request parameters, returns portal response.
-
-        Arguments:
-            in_url -- portal url
-            request_parameters -- dictionary of request parameters.
-            request_type -- HTTP verb (default: GET)
-            additional_headers -- any headers to pass along with the request.
-            files -- any files to send.
-            repeat -- repeat the request up to this number of times.
-
+        Make an HTTP request to the ArcGIS Online REST API.
+        
+        This method handles all HTTP communication with ArcGIS Online, including
+        authentication, error handling, and response parsing. It supports GET,
+        POST, and MULTIPART request types with automatic retry functionality.
+        
+        Args:
+            in_url (str): Target URL for the API request
+            request_parameters (dict): Parameters to include in the request
+            request_type (str): HTTP method - 'GET', 'POST', or 'MULTIPART'
+            additional_headers (dict, optional): Additional HTTP headers
+            files (dict, optional): Files to upload (currently unused)
+            repeat (int): Number of retry attempts for failed requests
+            
         Returns:
-            dictionary of response from portal instance.
+            dict: Parsed JSON response from the API
+            
+        Raises:
+            Automatic retry on failure, with configurable retry count
         """
 
         if request_type == 'GET':
-            req = urllib2.Request('?'.join((in_url, urllib.urlencode(request_parameters))))
+            req = urllib.request.Request('?'.join((in_url, urllib.parse.urlencode(request_parameters))))
         elif request_type == 'MULTIPART':
-            req = urllib2.Request(in_url, request_parameters)
+            req = urllib.request.Request(in_url, request_parameters)
         else:
-            req = urllib2.Request(
-                in_url, urllib.urlencode(request_parameters), self.headers)
+            req = urllib.request.Request(
+                in_url, urllib.parse.urlencode(request_parameters).encode('utf-8'), self.headers)
 
         if additional_headers:
             for key, value in list(additional_headers.items()):
                 req.add_header(key, value)
         req.add_header('Accept-encoding', 'gzip')
 
-        response = urllib2.urlopen(req)
+        response = urllib.request.urlopen(req)
 
         if response.info().get('Content-Encoding') == 'gzip':
             buf = BytesIO(response.read())
@@ -336,10 +484,12 @@ class AGOLHandler(object):
         boundary = "----WebKitFormBoundary{}".format("".join(random.choice(letters_digits) for i in range(16)))
         file_lines = []
         # Parse the params and files dicts to build the multipart request.
-        for name, value in params.iteritems():
-            file_lines.extend(("--{}".format(boundary),
-                               'Content-Disposition: form-data; name="{}"'.format(name),
-                               "", str(value)))
+        for name, value in params.items():
+            file_lines.append("--{}".format(boundary))
+            file_lines.append('Content-Disposition: form-data; name="{}"'.format(name))
+            file_lines.append("")
+            file_lines.append(str(value))
+        
         for name, value in files.items():
             if "filename" in value:
                 filename = value.get("filename")
@@ -350,23 +500,59 @@ class AGOLHandler(object):
             else:
                 mimetype = mimetypes.guess_type(filename)[0] or "application/octet-stream"
             if "content" in value:
-                file_lines.extend(("--{}".format(boundary),
-                                   'Content-Disposition: form-data; name="{}"; filename="{}"'.format(name, filename),
-                                   "Content-Type: {}".format(mimetype), "",
-                                   (value.get("content"))))
+                file_lines.append("--{}".format(boundary))
+                file_lines.append('Content-Disposition: form-data; name="{}"; filename="{}"'.format(name, filename))
+                file_lines.append("Content-Type: {}".format(mimetype))
+                file_lines.append("")
+                # Handle binary content properly
+                content = value.get("content")
+                if isinstance(content, bytes):
+                    # For binary content, we need to build the request differently
+                    text_part = "\r\n".join(file_lines).encode('utf-8')
+                    boundary_end = "\r\n--{}--\r\n".format(boundary).encode('utf-8')
+                    request_data = text_part + b"\r\n" + content + boundary_end
+                    request_headers = {"Content-Type": "multipart/form-data; boundary={}".format(boundary),
+                                     "Content-Length": str(len(request_data))}
+                    return request_data, request_headers
+                else:
+                    file_lines.append(str(content))
             else:
                 raise Exception("The content key is required.")
+        
         # Create the end of the form boundary.
-        file_lines.extend(("--{}--".format(boundary), ""))
+        file_lines.append("--{}--".format(boundary))
+        file_lines.append("")
 
-        request_data = "\r\n".join(file_lines)
+        request_data = "\r\n".join(file_lines).encode('utf-8')
         request_headers = {"Content-Type": "multipart/form-data; boundary={}".format(boundary),
                            "Content-Length": str(len(request_data))}
         return request_data, request_headers
 
-def makeSD(MXD, serviceName, tempDir, outputSD):
-    """ create a draft SD and modify the properties to overwrite an existing FS
+def makeSD(MXD, serviceName, tempDir, outputSD, config=None):
     """
+    Create a Service Definition (.SD) file from an ArcMap document (MXD).
+    
+    This function converts an ArcMap document into a Service Definition file
+    that can be uploaded to ArcGIS Online. It modifies the default service
+    properties to create a Feature Service with appropriate capabilities
+    instead of a Map Service.
+    
+    Args:
+        MXD (str): Full path to the ArcMap document (.mxd file)
+        serviceName (str): Name for the service (used in URLs and display)
+        tempDir (str): Directory for temporary files during processing
+        outputSD (str): Full path for the output Service Definition file
+        config (dict, optional): Configuration dictionary. If None, will load from config.json
+        
+    Returns:
+        None: Creates the .SD file at the specified output path
+        
+    Raises:
+        SystemExit: If service analysis fails or encounters errors
+        ValueError: If the input is not a valid .sddraft file
+    """
+    if config is None:
+        config = loadConfig()
 
     arcpy.env.overwriteOutput = True
     # All paths are built by joining names to the tempPath
@@ -380,43 +566,48 @@ def makeSD(MXD, serviceName, tempDir, outputSD):
 
     root_elem = doc.getroot()
     if root_elem.tag != "SVCManifest":
-        raise ValueError("Root tag is incorrect. Is {} a .sddraft file?".format(SDDraft))
+        raise ValueError("Root tag is incorrect. Is {} a .sddraft file?".format(SDdraft))
 
-    # The following 6 code pieces modify the SDDraft from a new MapService
-    # with caching capabilities to a FeatureService with Query,Create,
-    # Update,Delete,Uploads,Editing capabilities as well as the ability
-    # to set the max records on the service.
+    # The following sections modify the SDDraft from a new MapService
+    # with caching capabilities to a FeatureService with Query, Create,
+    # Update, Delete, Uploads, and Editing capabilities.
+    # 
     # The first two lines (commented out) are no longer necessary as the FS
     # is now being deleted and re-published, not truly overwritten as is the
     # case when publishing from Desktop.
-    # The last three pieces change Map to Feature Service, disable caching
+    # 
+    # The modifications change Map to Feature Service, disable caching
     # and set appropriate capabilities. You can customize the capabilities by
-    # removing items.
-    # Note you cannot disable Query from a Feature Service.
+    # removing items from the WebCapabilities list.
+    # Note: You cannot disable Query capability from a Feature Service.
 
+    # These lines would be used for true overwrite scenarios:
     # doc.find("./Type").text = "esriServiceDefinitionType_Replacement"
     # doc.find("./State").text = "esriSDState_Published"
 
-    # Change service type from map service to feature service
+    # Step 1: Change service type from MapServer to FeatureServer
+    # This converts the service from a map display service to a data editing service
     for config in doc.findall("./Configurations/SVCConfiguration/TypeName"):
         if config.text == "MapServer":
             config.text = "FeatureServer"
 
-    # Turn off caching
+    # Step 2: Disable caching for the service
+    # Feature services should not use caching as data can be edited
     for prop in doc.findall("./Configurations/SVCConfiguration/Definition/" +
                             "ConfigurationProperties/PropertyArray/" +
                             "PropertySetProperty"):
         if prop.find("Key").text == 'isCached':
             prop.find("Value").text = "false"
 
-    # Turn on feature access capabilities
+    # Step 3: Enable feature service capabilities
+    # This allows users to query, create, update, delete, and upload data
     for prop in doc.findall("./Configurations/SVCConfiguration/Definition/Info/PropertyArray/PropertySetProperty"):
         if prop.find("Key").text == 'WebCapabilities':
             prop.find("Value").text = "Query,Create,Update,Delete,Uploads,Editing"
 
-    # Add the namespaces which get stripped, back into the .SD
-    root_elem.attrib["xmlns:typens"] = 'http://www.esri.com/schemas/ArcGIS/10.1'
-    root_elem.attrib["xmlns:xs"] = 'http://www.w3.org/2001/XMLSchema'
+    # Step 4: Restore required XML namespaces that get stripped during parsing
+    root_elem.attrib["xmlns:typens"] = config.get('arcgisSchemaUrl', 'http://www.esri.com/schemas/ArcGIS/10.1')
+    root_elem.attrib["xmlns:xs"] = config.get('XMLSchemaUrl', 'http://www.w3.org/2001/XMLSchema')
 
     # Write the new draft to disk
     with open(newSDdraft, 'w') as f:
@@ -435,13 +626,30 @@ def makeSD(MXD, serviceName, tempDir, outputSD):
         print("Errors in analyze: \n {}".format(analysis['errors']))
         sys.exit()
 
-def updateContent(serviceName, MXD):
-
+def updateContent(serviceName, MXD, config=None):
+    """
+    Update an ArcGIS Online hosted feature service with new data.
+    
+    This function orchestrates the complete process of updating a hosted feature service:
+    1. Load configuration settings
+    2. Create Service Definition from MXD
+    3. Upload SD to ArcGIS Online
+    4. Publish the updated service
+    
+    Args:
+        serviceName (str): Name of the service to update
+        MXD (str): Path to the ArcMap document containing the data
+        config (dict, optional): Configuration dictionary. If None, will load from config.json
+    """
     print("Starting Feature Service publish process")
+    
+    # Load configuration if not provided
+    if config is None:
+        config = loadConfig()
 
-    # AGOL Credentials
-    inputUsername = "SammamishPlateauWater"
-    inputPswd = "W@ter@nd$ewer4u"
+    # AGOL Credentials from config
+    inputUsername = config.get('username', 'SammamishPlateauWater')
+    inputPswd = config.get('password', 'W@ter@nd$ewer4u')
 
     # FS values
     MXD = MXD
@@ -454,11 +662,11 @@ def updateContent(serviceName, MXD):
         os.mkdir(tempDir)
     finalSD = os.path.join(tempDir, serviceName + ".sd")
 
-    # initialize AGOLHandler class
-    agol = AGOLHandler(inputUsername, inputPswd, serviceName, folderName)
+    # initialize AGOLHandler class with config
+    agol = AGOLHandler(inputUsername, inputPswd, serviceName, folderName, config)
 
     # Turn map document into .SD file for uploading
-    makeSD(MXD, serviceName, tempDir, finalSD)
+    makeSD(MXD, serviceName, tempDir, finalSD, config)
 
     # overwrite the existing .SD on arcgis.com
     if agol.upload(finalSD):
@@ -469,4 +677,8 @@ def updateContent(serviceName, MXD):
         print("\nfinished.")
         
 if __name__ == "__main__":
-    updateArcGisOnlineService(serviceName, MXD)
+    # Example usage - you'll need to provide actual serviceName and MXD values
+    # serviceName = "YourServiceName"
+    # MXD = r"C:\path\to\your\map.mxd"
+    # updateContent(serviceName, MXD)
+    pass

@@ -76,6 +76,16 @@
             "verbose": true,
             "logMaintenanceSteps": true
         }
+    },
+
+    "myArcGISOnline": {
+        "baseUrl": "https://www.arcgis.com/sharing/rest",
+        "refererUrl": "http://www.arcgis.com/",
+        "arcgisSchemaUrl": "http://www.esri.com/schemas/ArcGIS/10.1",
+        "XMLSchemaUrl": "http://www.w3.org/2001/XMLSchema",
+        "username": "SammamishPlateauWater",
+        "password": "W@ter@nd$ewer4u"
+
     }
 
 
