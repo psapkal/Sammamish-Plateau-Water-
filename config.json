@@ -90,6 +90,20 @@
 
     "myFeatureClass": {
         "basename": "production.DBO.ssPump"
+    },
+
+    "updateCapacityProjectHostedLayers":{
+        "capacityProjectGdb": "\\\\SPW-DC1\\S_DIR\\GIS\\EnterpriseGISProjects\\ESRI_I_I\\Solution\\CapacityProjectData.gdb",
+        "viewLiftStations" : "\\\\SPW-DC1\\S_DIR\\GIS\\EnterpriseGISProjects\\ESRI_I_I\\Solution\\GISDB1.sde\\reporting.dbo.view_SCADA_Liftstation_FlowToday_CAP",
+        "viewLiftStationsInflow" : "\\\\SPW-DC1\\S_DIR\\GIS\\EnterpriseGISProjects\\ESRI_I_I\\Solution\\GISDB1.sde\\reporting.dbo.view_SCADA_Liftstation_InFlowToday_CAP",
+        "viewPrecipitation" : "\\\\SPW-DC1\\S_DIR\\GIS\\EnterpriseGISProjects\\ESRI_I_I\\Solution\\GISDB1.sde\\reporting.dbo.view_SCADA_Weather_RainToday_CAP",
+        "precipitationStatistics": "WeatherStations_Precipitation_Statistics",
+        "liftStationDissolveFlows": "Liftstations_DissolveFlows",
+        "httpLiftStations": "https://gisweb.spwater.org/host/rest/services/Hosted/Capacity_Project/FeatureServer/2",
+        "httpLiftStationsInflow": "https://gisweb.spwater.org/host/rest/services/Hosted/Capacity_Project/FeatureServer/1",
+        "httpWeatherStations": "https://gisweb.spwater.org/host/rest/services/Hosted/Capacity_Project/FeatureServer/0",
+        "httpDMA": "https://gisweb.spwater.org/host/rest/services/Hosted/Capacity_Project/FeatureServer/3"
+
     }
 
 
